@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ROBOTIC LAB 3D - Simulador Educativo de Arduino y Robótica</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- MediaPipe Hands & Camera Utils -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glow-green { text-shadow: 0 0 10px rgba(34, 197, 94, 0.6); }
+        .glow-blue { text-shadow: 0 0 10px rgba(59, 130, 246, 0.6); }
+        canvas { display: block; width: 100%; height: 100%; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.8); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col select-none overflow-x-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-cyan-500 to-blue-600 p-2.5 rounded-xl shadow-md shadow-cyan-500/20 text-white">
+                <i class="fa-solid fa-microchip text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">ROBOTIC LAB 3D</h1>
+                <p class="text-xs text-slate-400">Plataforma Educativa de Arduino & Robótica</p>
+            </div>
+        </div>
+
+        <nav class="hidden md:flex items-center space-x-1 bg-slate-950/60 p-1.5 rounded-xl border border-slate-800">
+            <button onclick="switchTab('inicio')" id="nav-inicio" class="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-cyan-600 text-white shadow">Inicio</button>
+            <button onclick="switchTab('teoria')" id="nav-teoria" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-800">Teoría</button>
+            <button onclick="switchTab('laboratorio')" id="nav-laboratorio" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-800">Laboratorio 3D</button>
+            <button onclick="switchTab('simuladores')" id="nav-simuladores" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-800">Simuladores</button>
+            <button onclick="switchTab('evaluacion')" id="nav-evaluacion" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-800">Evaluaciones</button>
+            <button onclick="switchTab('creditos')" id="nav-creditos" class="px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-800">Créditos</button>
+        </nav>
+
+        <div class="flex items-center space-x-2">
+            <button onclick="openGestureGuide()" class="bg-slate-800 hover:bg-slate-700 text-cyan-400 px-3 py-2 rounded-xl text-sm font-medium border border-slate-700 transition flex items-center space-x-2">
+                <i class="fa-solid fa-hand"></i>
+                <span class="hidden sm:inline">Guía de Gestos</span>
+            </button>
+            <button onclick="toggleMobileMenu()" class="md:hidden bg-slate-800 p-2 rounded-lg text-slate-300">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-900 border-b border-slate-800 p-4 space-y-2">
+        <button onclick="switchTab('inicio'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">Inicio</button>
+        <button onclick="switchTab('teoria'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">Teoría</button>
+        <button onclick="switchTab('laboratorio'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">Laboratorio 3D</button>
+        <button onclick="switchTab('simuladores'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">Simuladores</button>
+        <button onclick="switchTab('evaluacion'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">Evaluaciones</button>
+        <button onclick="switchTab('creditos'); toggleMobileMenu();" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm">Créditos</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col relative">
+
+        <!-- TAB 1: INICIO -->
+        <section id="tab-inicio" class="flex-1 flex flex-col p-6 lg:p-12 max-w-7xl mx-auto w-full justify-center">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-6">
+                    <span class="bg-cyan-950 border border-cyan-800 text-cyan-300 text-xs font-semibold px-3 py-1.5 rounded-full uppercase tracking-wider">Educación STEM Interactiva</span>
+                    <h2 class="text-4xl lg:text-6xl font-extrabold tracking-tight leading-tight">
+                        Aprende Electrónica y Robótica con <span class="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Tecnología 3D & Gestos</span>
+                    </h2>
+                    <p class="text-slate-300 text-lg">
+                        ROBOTIC LAB 3D es tu laboratorio virtual interactivo. Explora componentes electrónicos reales, programa Arduino UNO y Micro:bit, construye circuitos en protoboards virtuales y manipula todo con tus propias manos mediante inteligencia artificial y reconocimiento de gestos.
+                    </p>
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <button onclick="switchTab('laboratorio')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-6 py-3.5 rounded-xl shadow-lg shadow-cyan-600/30 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-vr-cardboard"></i>
+                            <span>Entrar al Laboratorio 3D</span>
+                        </button>
+                        <button onclick="switchTab('teoria')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-6 py-3.5 rounded-xl border border-slate-700 transition flex items-center space-x-2">
+                            <i class="fa-solid fa-book-open"></i>
+                            <span>Explorar Teoría</span>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800">
+                        <div>
+                            <h4 class="text-2xl font-bold text-cyan-400">100%</h4>
+                            <p class="text-xs text-slate-400">Interactivo en 3D</p>
+                        </div>
+                        <div>
+                            <h4 class="text-2xl font-bold text-blue-400">6+</h4>
+                            <p class="text-xs text-slate-400">Simuladores Reales</p>
+                        </div>
+                        <div>
+                            <h4 class="text-2xl font-bold text-emerald-400">AI</h4>
+                            <p class="text-xs text-slate-400">Control por Gestos</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative flex justify-center">
+                    <div class="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-3xl blur-xl opacity-30 animate-pulse"></div>
+                    <div class="relative glass-panel p-8 rounded-3xl shadow-2xl w-full max-w-md space-y-6">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+                                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Secuencia Pedagógica</span>
+                            </div>
+                            <span class="text-xs bg-slate-800 px-2.5 py-1 rounded-md text-cyan-400">Método Activo</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-start space-x-4 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+                                <div class="bg-cyan-600/20 text-cyan-400 p-2.5 rounded-lg"><i class="fa-solid fa-brain"></i></div>
+                                <div>
+                                    <h5 class="text-sm font-semibold">1. Aprende</h5>
+                                    <p class="text-xs text-slate-400">Lecciones completas de Arduino, Micro:bit y Electrónica.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+                                <div class="bg-blue-600/20 text-blue-400 p-2.5 rounded-lg"><i class="fa-solid fa-cube"></i></div>
+                                <div>
+                                    <h5 class="text-sm font-semibold">2. Explora & Manipula 3D</h5>
+                                    <p class="text-xs text-slate-400">Selecciona, mueve y gira componentes con gestos o ratón.</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start space-x-4 bg-slate-900/80 p-3.5 rounded-xl border border-slate-800">
+                                <div class="bg-emerald-600/20 text-emerald-400 p-2.5 rounded-lg"><i class="fa-solid fa-bolt"></i></div>
+                                <div>
+                                    <h5 class="text-sm font-semibold">3. Simula & Evalúa</h5>
+                                    <p class="text-xs text-slate-400">Construye circuitos reales y comprueba tus conocimientos.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: TEORÍA -->
+        <section id="tab-teoria" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full space-y-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                <div>
+                    <h2 class="text-3xl font-bold">Módulos Teóricos</h2>
+                    <p class="text-slate-400 text-sm">Contenido educativo estructurado para dominar la robótica y la electrónica.</p>
+                </div>
+                <div class="flex space-x-2 overflow-x-auto pb-2 md:pb-0">
+                    <button onclick="switchTheoryModule('arduino')" id="btn-theory-arduino" class="px-4 py-2 rounded-lg text-sm font-medium bg-cyan-600 text-white whitespace-nowrap">Arduino UNO</button>
+                    <button onclick="switchTheoryModule('micro')" id="btn-theory-micro" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">Micro:bit</button>
+                    <button onclick="switchTheoryModule('electronica')" id="btn-theory-electronica" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap">Electrónica Básica</button>
+                </div>
+            </div>
+
+            <!-- Theory Container -->
+            <div id="theory-content-container" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Content will be injected dynamically -->
+            </div>
+        </section>
+
+        <!-- TAB 3: LABORATORIO 3D -->
+        <section id="tab-laboratorio" class="hidden flex-1 flex flex-col relative w-full h-[calc(100vh-65px)]">
+            <!-- Top Lab Control Bar -->
+            <div class="bg-slate-900/95 border-b border-slate-800 px-4 py-2 flex flex-wrap items-center justify-between gap-3 z-10">
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm font-bold text-cyan-400 flex items-center space-x-2">
+                        <i class="fa-solid fa-flask"></i>
+                        <span>Laboratorio Virtual</span>
+                    </span>
+                    <div class="h-4 w-px bg-slate-700"></div>
+                    <!-- Camera Toggle Button (Strictly inside 3D Lab) -->
+                    <button id="cam-toggle-btn" onclick="toggleCamera()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-video" id="cam-icon"></i>
+                        <span id="cam-btn-text">Activar Cámara</span>
+                    </button>
+                </div>
+
+                <!-- Interaction Modes: Move / Rotate Component -->
+                <div class="flex items-center space-x-2 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                    <span class="text-xs text-slate-400 font-medium px-1">Modo Objeto:</span>
+                    <button onclick="setInteractionMode('move')" id="mode-move-btn" class="px-3 py-1 rounded bg-cyan-600 text-white text-xs font-semibold transition">
+                        <i class="fa-solid fa-arrows-up-down-left-right mr-1"></i> Mover
+                    </button>
+                    <button onclick="setInteractionMode('rotate')" id="mode-rotate-btn" class="px-3 py-1 rounded bg-slate-800 text-slate-300 text-xs font-semibold transition hover:bg-slate-700">
+                        <i class="fa-solid fa-rotate mr-1"></i> Girar
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button onclick="resetCameraView()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition" title="Restablecer Vista de Cámara">
+                        <i class="fa-solid fa-video-camera mr-1"></i> Reset Vista
+                    </button>
+                    <button onclick="resetLabScene()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Reiniciar Mesa
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lab Main Workspace -->
+            <div class="flex-1 flex relative overflow-hidden">
+                <!-- Sidebar Component Catalog -->
+                <aside class="w-64 bg-slate-900/90 border-r border-slate-800 flex flex-col p-4 space-y-4 z-10 overflow-y-auto">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Catálogo de Componentes</h3>
+                    <p class="text-xs text-slate-500">Haz clic para agregar a la mesa:</p>
+                    
+                    <div class="space-y-2.5">
+                        <button onclick="spawnComponent('arduino')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-cyan-500/20 text-cyan-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-microchip"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">Arduino UNO R3</h4>
+                                <p class="text-[10px] text-slate-400">Microcontrolador</p>
+                            </div>
+                        </button>
+
+                        <button onclick="spawnComponent('protoboard')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-table-cells"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">Protoboard</h4>
+                                <p class="text-[10px] text-slate-400">Placa de pruebas</p>
+                            </div>
+                        </button>
+
+                        <button onclick="spawnComponent('resistor')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-amber-500/20 text-amber-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-bars"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">Resistencia 220Ω</h4>
+                                <p class="text-[10px] text-slate-400">Con bandas de color</p>
+                            </div>
+                        </button>
+
+                        <button onclick="spawnComponent('led')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-red-500/20 text-red-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-lightbulb"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">LED Rojo</h4>
+                                <p class="text-[10px] text-slate-400">Actuador lumínico</p>
+                            </div>
+                        </button>
+
+                        <button onclick="spawnComponent('ultrasonic')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-blue-500/20 text-blue-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-wifi"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">Sensor HC-SR04</h4>
+                                <p class="text-[10px] text-slate-400">Ultrasónico</p>
+                            </div>
+                        </button>
+
+                        <button onclick="spawnComponent('servo')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-purple-500/20 text-purple-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-gear"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">Servomotor SG90</h4>
+                                <p class="text-[10px] text-slate-400">Actuador rotativo</p>
+                            </div>
+                        </button>
+
+                        <button onclick="spawnComponent('pushbutton')" class="w-full bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-cyan-500 p-2.5 rounded-xl text-left flex items-center space-x-3 transition group">
+                            <div class="bg-rose-500/20 text-rose-400 p-2 rounded-lg group-hover:scale-110 transition"><i class="fa-solid fa-circle"></i></div>
+                            <div>
+                                <h4 class="text-xs font-semibold">Pulsador</h4>
+                                <p class="text-[10px] text-slate-400">Botón táctil</p>
+                            </div>
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Three.js Canvas Container -->
+                <div id="canvas-container" class="flex-1 relative bg-slate-950">
+                    <!-- Permanent Lab Status HUD Overlay -->
+                    <div class="absolute top-4 left-4 glass-panel p-4 rounded-xl space-y-2 pointer-events-none z-10 shadow-lg min-w-[240px]">
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span class="text-xs font-bold text-slate-400 uppercase">Estado del Laboratorio</span>
+                            <span id="hud-status" class="text-xs bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded font-mono">Libre</span>
+                        </div>
+                        <div class="space-y-1 text-xs">
+                            <p><span class="text-slate-400">Seleccionado:</span> <strong id="hud-selected" class="text-cyan-300">Ninguno</strong></p>
+                            <p><span class="text-slate-400">Modo Objeto:</span> <strong id="hud-mode" class="text-emerald-400 font-mono">Mover</strong></p>
+                            <p><span class="text-slate-400">Gesto IA:</span> <strong id="hud-gesture" class="text-amber-400">Ninguno</strong></p>
+                            <p><span class="text-slate-400">Snapping Grid:</span> <strong id="hud-snap" class="text-emerald-300">Inactivo</strong></p>
+                        </div>
+                    </div>
+
+                    <!-- Small Webcam Tracking Floating Window (Only inside 3D Lab when active) -->
+                    <div id="webcam-container" class="absolute bottom-4 right-4 w-48 h-36 bg-slate-900 border-2 border-slate-700 rounded-xl overflow-hidden shadow-2xl hidden z-20">
+                        <video id="webcam" class="w-full h-full object-cover transform -scale-x-100" autoplay playsinline></video>
+                        <canvas id="output_canvas" class="absolute inset-0 w-full h-full pointer-events-none transform -scale-x-100"></canvas>
+                        <div class="absolute top-2 left-2 bg-black/60 px-2 py-0.5 rounded text-[10px] text-emerald-400 font-mono flex items-center space-x-1">
+                            <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <span>Cámara Activa</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: SIMULADORES -->
+        <section id="tab-simuladores" class="hidden flex-1 p-6 max-w-7xl mx-auto w-full space-y-8">
+            <div class="border-b border-slate-800 pb-4">
+                <h2 class="text-3xl font-bold">Simuladores Electrónicos Interactivos</h2>
+                <p class="text-slate-400 text-sm">Comprueba la lógica de circuitos con Arduino y Micro:bit en tiempo real.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Sim 1: Arduino & LED -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="bg-cyan-950 text-cyan-400 text-xs px-2.5 py-1 rounded font-semibold">Simulador 1</span>
+                            <i class="fa-solid fa-lightbulb text-cyan-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold">Arduino UNO & LED</h3>
+                        <p class="text-xs text-slate-400 mt-1">Controla el encendido y apagado de un LED conectado al Pin 13 digital.</p>
+                    </div>
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col items-center justify-center space-y-3">
+                        <div id="sim1-led" class="w-12 h-12 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center transition-all shadow-lg">
+                            <i class="fa-solid fa-bolt text-slate-600 text-lg" id="sim1-icon"></i>
+                        </div>
+                        <span id="sim1-status-text" class="text-xs font-mono text-slate-400">LED Apagado (LOW)</span>
+                    </div>
+                    <button onclick="runSimulator(1)" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-2.5 rounded-xl transition text-sm">
+                        Ejecutar Código Pin 13 HIGH
+                    </button>
+                </div>
+
+                <!-- Sim 2: LED con Pulsador -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="bg-emerald-950 text-emerald-400 text-xs px-2.5 py-1 rounded font-semibold">Simulador 2</span>
+                            <i class="fa-solid fa-circle text-emerald-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold">LED con Pulsador</h3>
+                        <p class="text-xs text-slate-400 mt-1">Presiona el botón virtual para cerrar el circuito y encender el LED.</p>
+                    </div>
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-around">
+                        <div class="flex flex-col items-center">
+                            <button id="sim2-btn" onmousedown="pressButton(true)" onmouseup="pressButton(false)" ontouchstart="pressButton(true)" ontouchend="pressButton(false)" class="w-14 h-14 rounded-full bg-red-600 hover:bg-red-500 active:scale-95 shadow-lg flex items-center justify-center text-white font-bold text-xs transition">
+                                PULSAR
+                            </button>
+                            <span class="text-[10px] text-slate-400 mt-2">Mantén presionado</span>
+                        </div>
+                        <div class="flex flex-col items-center space-y-2">
+                            <div id="sim2-led" class="w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center transition-all">
+                                <i class="fa-solid fa-lightbulb text-slate-600"></i>
+                            </div>
+                            <span id="sim2-status" class="text-[10px] font-mono text-slate-400">Apagado</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-center text-slate-400">Interactúa con el botón para probar la respuesta.</div>
+                </div>
+
+                <!-- Sim 3: Sensor Ultrasónico -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="bg-blue-950 text-blue-400 text-xs px-2.5 py-1 rounded font-semibold">Simulador 3</span>
+                            <i class="fa-solid fa-wifi text-blue-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold">Sensor HC-SR04</h3>
+                        <p class="text-xs text-slate-400 mt-1">Simula la distancia a un obstáculo y observa la medición en cm.</p>
+                    </div>
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-slate-400">Distancia Objeto:</span>
+                            <span id="sim3-val" class="text-cyan-400 font-bold">50 cm</span>
+                        </div>
+                        <input type="range" min="2" max="400" value="50" oninput="updateUltrasonicSim(this.value)" class="w-full accent-cyan-500">
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl text-center border border-slate-800">
+                        <span id="sim3-feedback" class="text-xs text-cyan-300 font-medium">Objeto detectado a rango óptimo.</span>
+                    </div>
+                </div>
+
+                <!-- Sim 4: Servomotor -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="bg-purple-950 text-purple-400 text-xs px-2.5 py-1 rounded font-semibold">Simulador 4</span>
+                            <i class="fa-solid fa-gear text-purple-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold">Servomotor SG90</h3>
+                        <p class="text-xs text-slate-400 mt-1">Establece el ángulo del eje de 0° a 180°.</p>
+                    </div>
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-slate-400">Ángulo Actual:</span>
+                            <span id="sim4-val" class="text-purple-400 font-bold">90°</span>
+                        </div>
+                        <input type="range" min="0" max="180" value="90" oninput="updateServoSim(this.value)" class="w-full accent-purple-500">
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl text-center border border-slate-800">
+                        <span id="sim4-feedback" class="text-xs text-purple-300 font-medium">Posición central (90 grados).</span>
+                    </div>
+                </div>
+
+                <!-- Sim 5: Micro:bit Matriz LED -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="bg-amber-950 text-amber-400 text-xs px-2.5 py-1 rounded font-semibold">Simulador 5</span>
+                            <i class="fa-solid fa-table-cells text-amber-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold">Micro:bit Matriz 5×5</h3>
+                        <p class="text-xs text-slate-400 mt-1">Enciende y apaga individualmente los 25 LEDs de la matriz.</p>
+                    </div>
+                    <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex justify-center">
+                        <div id="matrix-grid" class="grid grid-cols-5 gap-1.5">
+                            <!-- Generated via JS -->
+                        </div>
+                    </div>
+                    <button onclick="clearMatrix()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-xl text-xs font-semibold transition">
+                        Limpiar Matriz
+                    </button>
+                </div>
+
+                <!-- Sim 6: Micro:bit Botones A y B -->
+                <div class="glass-panel p-6 rounded-2xl flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="bg-rose-950 text-rose-400 text-xs px-2.5 py-1 rounded font-semibold">Simulador 6</span>
+                            <i class="fa-solid fa-gamepad text-rose-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-bold">Micro:bit Botones A & B</h3>
+                        <p class="text-xs text-slate-400 mt-1">Programa respuestas al presionar los botones integrados.</p>
+                    </div>
+                    <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex justify-around items-center">
+                        <button onclick="pressMicroButton('A')" class="w-16 h-16 rounded-2xl bg-cyan-700 hover:bg-cyan-600 font-bold text-white shadow-lg transition active:scale-95">Boton A</button>
+                        <button onclick="pressMicroButton('B')" class="w-16 h-16 rounded-2xl bg-blue-700 hover:bg-blue-600 font-bold text-white shadow-lg transition active:scale-95">Boton B</button>
+                    </div>
+                    <div class="bg-slate-950 p-3 rounded-xl text-center border border-slate-800">
+                        <span id="sim6-output" class="text-xs font-mono text-cyan-300">Esperando evento de botón...</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: EVALUACIONES -->
+        <section id="tab-evaluacion" class="hidden flex-1 p-6 max-w-4xl mx-auto w-full space-y-8">
+            <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold">Evaluación de Conocimientos</h2>
+                    <p class="text-slate-400 text-sm">Responde las preguntas y recibe retroalimentación visual inmediata (Verde / Rojo).</p>
+                </div>
+                <div class="text-right">
+                    <span id="quiz-score" class="text-lg font-bold text-cyan-400">Puntuación: 0 / 100</span>
+                </div>
+            </div>
+
+            <div id="quiz-container" class="space-y-6">
+                <!-- Quiz questions injected dynamically -->
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button onclick="submitQuiz()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold px-6 py-3 rounded-xl transition shadow-lg shadow-cyan-600/30">
+                    Calificar Evaluación
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 6: CRÉDITOS -->
+        <section id="tab-creditos" class="hidden flex-1 p-6 max-w-4xl mx-auto w-full flex items-center justify-center">
+            <div class="glass-panel p-8 md:p-12 rounded-3xl w-full space-y-8 text-center shadow-2xl">
+                <div class="inline-block bg-cyan-500/20 text-cyan-400 p-4 rounded-2xl mb-2">
+                    <i class="fa-solid fa-graduation-cap text-3xl"></i>
+                </div>
+                <h2 class="text-3xl font-bold">Créditos del Proyecto</h2>
+                <p class="text-slate-300 max-w-lg mx-auto text-sm">
+                    ROBOTIC LAB 3D fue desarrollado como una plataforma educativa de alta calidad para la enseñanza de Arduino, Micro:bit, electrónica y robótica con tecnología 3D y reconocimiento de gestos por IA.
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                    <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-inner">
+                        <div class="w-12 h-12 bg-cyan-600/20 text-cyan-400 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-lg">JV</div>
+                        <h4 class="font-bold text-white">Juan Varela</h4>
+                        <p class="text-xs text-slate-400 mt-1">Desarrollador Principal & Arquitecto 3D</p>
+                    </div>
+                    <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-inner">
+                        <div class="w-12 h-12 bg-blue-600/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-lg">IT</div>
+                        <h4 class="font-bold text-white">Isaac Teheran</h4>
+                        <p class="text-xs text-slate-400 mt-1">Especialista en IA & Reconocimiento de Gestos</p>
+                    </div>
+                    <div class="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-inner">
+                        <div class="w-12 h-12 bg-emerald-600/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 font-bold text-lg">AR</div>
+                        <h4 class="font-bold text-white">Andres Ramirez</h4>
+                        <p class="text-xs text-slate-400 mt-1">Diseñador Pedagógico & Simuladores</p>
+                    </div>
+                </div>
+                <div class="pt-6 border-t border-slate-800 text-xs text-slate-500">
+                    © 2026 ROBOTIC LAB 3D. Todos los derechos reservados.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal: Guía de Gestos -->
+    <div id="gesture-guide-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-panel p-6 md:p-8 rounded-3xl max-w-xl w-full space-y-6 shadow-2xl relative border border-slate-700 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <h3 class="text-xl font-bold flex items-center space-x-2 text-cyan-400">
+                    <i class="fa-solid fa-hand"></i>
+                    <span>Guía Completa de Gestos y Controles</span>
+                </h3>
+                <button onclick="closeGestureGuide()" class="text-slate-400 hover:text-white p-2">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-4 text-sm text-slate-300">
+                <div class="flex items-start space-x-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    <div class="bg-cyan-600/20 text-cyan-400 p-2 rounded-lg"><i class="fa-solid fa-hand-pointer"></i></div>
+                    <div>
+                        <strong class="text-white block">Pinza (Índice + Pulgar):</strong>
+                        <p class="text-xs text-slate-400 mt-0.5">Une la punta del dedo índice y pulgar frente a la cámara para seleccionar individualmente un componente (Arduino, Resistencia, LED, etc.).</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    <div class="bg-blue-600/20 text-blue-400 p-2 rounded-lg"><i class="fa-solid fa-hand-holding"></i></div>
+                    <div>
+                        <strong class="text-white block">Pinza Sostenida y Movimiento:</strong>
+                        <p class="text-xs text-slate-400 mt-0.5">Mantén la pinza cerrada para arrastrar el objeto seleccionado por la mesa. Al acercarlo a la protoboard, se ajustará automáticamente a la superficie sin atravesarla.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    <div class="bg-amber-600/20 text-amber-400 p-2 rounded-lg"><i class="fa-solid fa-hands-bubbles"></i></div>
+                    <div>
+                        <strong class="text-white block">Separar Índice y Pulgar (Soltar):</strong>
+                        <p class="text-xs text-slate-400 mt-0.5">Separa los dedos para soltar el componente en su posición actual o insertarlo en la protoboard.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    <div class="bg-emerald-600/20 text-emerald-400 p-2 rounded-lg"><i class="fa-solid fa-hand"></i></div>
+                    <div>
+                        <strong class="text-white block">Mano Abierta y Desplazamiento (Rotar Vista):</strong>
+                        <p class="text-xs text-slate-400 mt-0.5">Muestra una mano abierta y desplázala para rotar la órbita de la cámara alrededor del laboratorio, manteniendo los objetos fijos en su lugar.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    <div class="bg-purple-600/20 text-purple-400 p-2 rounded-lg"><i class="fa-solid fa-arrows-split-up-and-left"></i></div>
+                    <div>
+                        <strong class="text-white block">Dos Manos - Separar (Zoom In):</strong>
+                        <p class="text-xs text-slate-400 mt-0.5">Separa ambas manos frente a la cámara para acercar progresivamente la vista del laboratorio.</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3 bg-slate-900 p-3.5 rounded-xl border border-slate-800">
+                    <div class="bg-rose-600/20 text-rose-400 p-2 rounded-lg"><i class="fa-solid fa-arrows-to-dot"></i></div>
+                    <div>
+                        <strong class="text-white block">Dos Manos - Juntar (Zoom Out):</strong>
+                        <p class="text-xs text-slate-400 mt-0.5">Junta ambas manos para alejar la cámara y obtener una vista general de la mesa.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeGestureGuide()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-2 rounded-xl text-sm font-semibold transition">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        /* --- Navigation Tabs --- */
+        function switchTab(tabId) {
+            ['inicio', 'teoria', 'laboratorio', 'simuladores', 'evaluacion', 'creditos'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.add('hidden');
+                const navBtn = document.getElementById(`nav-${id}`);
+                if (navBtn) {
+                    navBtn.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all text-slate-300 hover:text-white hover:bg-slate-800";
+                }
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.className = "px-4 py-2 rounded-lg text-sm font-medium transition-all bg-cyan-600 text-white shadow";
+            }
+
+            if (tabId === 'laboratorio') {
+                init3DLabOnce();
+            } else {
+                stopCamera();
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function openGestureGuide() {
+            document.getElementById('gesture-guide-modal').classList.remove('hidden');
+        }
+
+        function closeGestureGuide() {
+            document.getElementById('gesture-guide-modal').classList.add('hidden');
+        }
+
+        /* --- Theory Content Data & Render --- */
+        const theoryData = {
+            arduino: [
+                {
+                    title: "Historia y Qué es Arduino",
+                    desc: "Arduino nació en 2005 en Ivrea (Italia) como proyecto para estudiantes. Es una plataforma de hardware libre basada en una placa con un microcontrolador y un entorno de desarrollo para escribir software."
+                },
+                {
+                    title: "Estructura del Programa (setup y loop)",
+                    desc: "Todo sketch de Arduino requiere dos funciones principales: setup() que se ejecuta una sola vez al iniciar para configurar pines, y loop() que se ejecuta en bucle continuo."
+                },
+                {
+                    title: "Pines Digitales y Analógicos",
+                    desc: "Los pines digitales leen o escriben estados HIGH/LOW (0V o 5V). Los pines analógicos (A0-A5) leen voltajes intermedios mediante un conversor analógico-digital (ADC) de 10 bits."
+                }
+            ],
+            micro: [
+                {
+                    title: "BBC Micro:bit",
+                    desc: "Placa de desarrollo de bolsillo diseñada por la BBC para introducir a los jóvenes en la programación y el hardware de forma visual y creativa."
+                },
+                {
+                    title: "Matriz LED 5×5 y Botones A/B",
+                    desc: "Integra 25 LEDs individuales configurables como pantalla de visualización o sensor de luz ambiental, junto con dos botones pulsadores programables."
+                },
+                {
+                    title: "Sensores Integrados",
+                    desc: "Incluye acelerómetro de 3 ejes, brújula magnética y sensor de temperatura para crear proyectos interactivos de movimiento."
+                }
+            ],
+            electronica: [
+                {
+                    title: "Ley de Ohm",
+                    desc: "Establece que la corriente (I) que fluye a través de un conductor entre dos puntos es directamente proporcional al voltaje (V) e inversamente proporcional a la resistencia (R). Fórmula: V = I × R."
+                },
+                {
+                    title: "Protoboard (Placa de Prototipos)",
+                    desc: "Tablero con orificios interconectados internamente que permite armar circuitos electrónicos sin necesidad de soldadura."
+                },
+                {
+                    title: "Componentes Activos y Pasivos",
+                    desc: "Los pasivos (resistencias, condensadores) no amplifican señales. Los activos (transistores, circuitos integrados) requieren fuente de energía para controlar corriente."
+                }
+            ]
+        };
+
+        function switchTheoryModule(moduleKey) {
+            ['arduino', 'micro', 'electronica'].forEach(k => {
+                const btn = document.getElementById(`btn-theory-${k}`);
+                if (btn) btn.className = k === moduleKey ? "px-4 py-2 rounded-lg text-sm font-medium bg-cyan-600 text-white whitespace-nowrap" : "px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 whitespace-nowrap";
+            });
+
+            const container = document.getElementById('theory-content-container');
+            container.innerHTML = theoryData[moduleKey].map(item => `
+                <div class="glass-panel p-6 rounded-2xl space-y-3 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-cyan-400 mb-2">${item.title}</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">${item.desc}</p>
+                    </div>
+                    <div class="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                        <span>Módulo Educativo</span>
+                        <span class="text-cyan-400 font-medium">Lectura Recomendada</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        switchTheoryModule('arduino');
+
+        /* --- 3D Laboratory (Three.js & MediaPipe Hands) --- */
+        let labInitialized = false;
+        let scene, camera, renderer, raycaster, mouse;
+        let sceneObjects = [];
+        let selectedObject = null;
+        let protoboardObj = null;
+        let interactionMode = 'move'; // 'move' or 'rotate'
+        let gestureMode = 'none';
+        let cameraActive = false;
+        let mediaPipeHands, cameraUtilsInstance;
+        let dragPlane;
+        let isMouseDown = false;
+        let isOrbiting = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraOrbitAngleX = 0;
+        let cameraOrbitAngleY = 0.6;
+        let cameraDistance = 16;
+
+        function init3DLabOnce() {
+            if (labInitialized) return;
+            labInitialized = true;
+
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x090d16);
+
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            updateCameraPosition();
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(10, 20, 15);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const tableGeo = new THREE.BoxGeometry(28, 0.6, 18);
+            const tableMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 });
+            const table = new THREE.Mesh(tableGeo, tableMat);
+            table.position.set(0, -0.6, 0);
+            table.receiveShadow = true;
+            scene.add(table);
+
+            // Initial Test Scene Components
+            protoboardObj = spawnComponent('protoboard', new THREE.Vector3(0, 0, 0));
+            spawnComponent('arduino', new THREE.Vector3(-6, 0, 0));
+            spawnComponent('resistor', new THREE.Vector3(3, 0, -2));
+            spawnComponent('resistor', new THREE.Vector3(3, 0, 0));
+            spawnComponent('resistor', new THREE.Vector3(3, 0, 2));
+            spawnComponent('led', new THREE.Vector3(-2, 0, -3));
+            spawnComponent('led', new THREE.Vector3(-2, 0, 3));
+
+            // Mouse & Interaction Listeners
+            const domElement = renderer.domElement;
+            domElement.addEventListener('mousedown', onCanvasMouseDown);
+            domElement.addEventListener('mousemove', onCanvasMouseMove);
+            domElement.addEventListener('mouseup', onCanvasMouseUp);
+            domElement.addEventListener('wheel', onCanvasWheel);
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            animateLab();
+        }
+
+        function updateCameraPosition() {
+            camera.position.x = cameraDistance * Math.sin(cameraOrbitAngleX) * Math.cos(cameraOrbitAngleY);
+            camera.position.y = cameraDistance * Math.sin(cameraOrbitAngleY);
+            camera.position.z = cameraDistance * Math.cos(cameraOrbitAngleX) * Math.cos(cameraOrbitAngleY);
+            camera.lookAt(0, 0, 0);
+        }
+
+        function resetCameraView() {
+            cameraOrbitAngleX = 0;
+            cameraOrbitAngleY = 0.6;
+            cameraDistance = 16;
+            updateCameraPosition();
+        }
+
+        /* --- Spawning Detailed 3D Components with Collision/Snap Support --- */
+        let componentIdCounter = 1;
+
+        function spawnComponent(type, customPos = null) {
+            const group = new THREE.Group();
+            group.userData = {
+                id: `comp_${componentIdCounter++}`,
+                type: type,
+                name: getComponentName(type),
+                status: 'free',
+                isComponent: true,
+                isInserted: false
+            };
+
+            const pos = customPos || new THREE.Vector3((Math.random() - 0.5) * 4, 0.2, (Math.random() - 0.5) * 4);
+            group.position.copy(pos);
+
+            if (type === 'arduino') {
+                const pcbGeo = new THREE.BoxGeometry(5, 0.2, 3.5);
+                const pcbMat = new THREE.MeshStandardMaterial({ color: 0x004466, roughness: 0.4 });
+                const pcb = new THREE.Mesh(pcbGeo, pcbMat);
+                pcb.position.y = 0.1;
+                group.add(pcb);
+
+                const usbGeo = new THREE.BoxGeometry(1, 0.5, 1.2);
+                const usbMat = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.8 });
+                const usb = new THREE.Mesh(usbGeo, usbMat);
+                usb.position.set(-2.2, 0.4, 0);
+                group.add(usb);
+
+                const mcuGeo = new THREE.BoxGeometry(1.2, 0.2, 0.8);
+                const mcuMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+                const mcu = new THREE.Mesh(mcuGeo, mcuMat);
+                mcu.position.set(0, 0.25, 0);
+                group.add(mcu);
+            } 
+            else if (type === 'protoboard') {
+                const protoGeo = new THREE.BoxGeometry(7, 0.35, 5);
+                const protoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.9 });
+                const proto = new THREE.Mesh(protoGeo, protoMat);
+                proto.position.y = 0.175;
+                group.add(proto);
+
+                // Add visual grid holes indication
+                for (let x = -2.8; x <= 2.8; x += 0.4) {
+                    for (let z = -1.8; z <= 1.8; z += 0.4) {
+                        const holeGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.02, 8);
+                        const holeMat = new THREE.MeshBasicMaterial({ color: 0x334155 });
+                        const hole = new THREE.Mesh(holeGeo, holeMat);
+                        hole.position.set(x, 0.36, z);
+                        group.add(hole);
+                    }
+                }
+            }
+            else if (type === 'resistor') {
+                const bodyGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.4, 12);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 });
+                const body = new THREE.Mesh(bodyGeo, bodyMat);
+                body.rotation.z = Math.PI / 2;
+                body.position.y = 0.4;
+                group.add(body);
+
+                // Color bands (Resistor value encoding)
+                const bandGeo = new THREE.CylinderGeometry(0.13, 0.13, 0.1, 12);
+                const redMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+                const band1 = new THREE.Mesh(bandGeo, redMat);
+                band1.rotation.z = Math.PI / 2;
+                band1.position.set(-0.3, 0.4, 0);
+                group.add(band1);
+
+                const band2 = new THREE.Mesh(bandGeo, redMat);
+                band2.rotation.z = Math.PI / 2;
+                band2.position.set(-0.1, 0.4, 0);
+                group.add(band2);
+
+                const brownMat = new THREE.MeshBasicMaterial({ color: 0x92400e });
+                const band3 = new THREE.Mesh(bandGeo, brownMat);
+                band3.rotation.z = Math.PI / 2;
+                band3.position.set(0.1, 0.4, 0);
+                group.add(band3);
+
+                // Terminal pins
+                const termGeo = new THREE.CylinderGeometry(0.03, 0.03, 2.2, 8);
+                const termMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9 });
+                const term = new THREE.Mesh(termGeo, termMat);
+                term.rotation.z = Math.PI / 2;
+                term.position.y = 0.4;
+                group.add(term);
+            }
+            else if (type === 'led') {
+                const bulbGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                const bulbMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.6, transparent: true, opacity: 0.9 });
+                const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+                bulb.position.y = 0.65;
+                group.add(bulb);
+
+                const baseGeo = new THREE.CylinderGeometry(0.32, 0.32, 0.2, 16);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 0.35;
+                group.add(base);
+
+                const pinGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.7, 8);
+                const pinMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.9 });
+                const pin1 = new THREE.Mesh(pinGeo, pinMat);
+                pin1.position.set(-0.1, 0.05, 0);
+                const pin2 = new THREE.Mesh(pinGeo, pinMat);
+                pin2.position.set(0.1, 0.05, 0);
+                group.add(pin1);
+                group.add(pin2);
+            }
+            else if (type === 'ultrasonic') {
+                const baseGeo = new THREE.BoxGeometry(2.5, 0.8, 0.6);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 0.4;
+                group.add(base);
+            }
+            else if (type === 'servo') {
+                const baseGeo = new THREE.BoxGeometry(1.5, 1.2, 1.5);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 0.6;
+                group.add(base);
+            }
+            else if (type === 'pushbutton') {
+                const baseGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.4, 16);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 0.2;
+                group.add(base);
+            }
+
+            scene.add(group);
+            sceneObjects.push(group);
+            selectObject(group);
+            return group;
+        }
+
+        function getComponentName(type) {
+            const names = {
+                arduino: 'Arduino UNO R3',
+                protoboard: 'Protoboard',
+                resistor: 'Resistencia 220Ω',
+                led: 'LED Rojo',
+                ultrasonic: 'Sensor Ultrasónico',
+                servo: 'Servomotor SG90',
+                pushbutton: 'Pulsador'
+            };
+            return names[type] || 'Componente';
+        }
+
+        /* --- Selection & Raycasting Logic --- */
+        function selectObject(obj) {
+            if (selectedObject === obj) return;
+            selectedObject = obj;
+            updateHUD();
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-selected').innerText = selectedObject ? selectedObject.userData.name : 'Ninguno';
+            document.getElementById('hud-status').innerText = selectedObject ? selectedObject.userData.status : 'Libre';
+            document.getElementById('hud-mode').innerText = interactionMode === 'move' ? 'Mover' : 'Girar';
+            document.getElementById('hud-gesture').innerText = gestureMode;
+            document.getElementById('hud-snap').innerText = (selectedObject && selectedObject.userData.isInserted) ? 'Insertado (Snap)' : 'Inactivo';
+        }
+
+        function setInteractionMode(mode) {
+            interactionMode = mode;
+            document.getElementById('mode-move-btn').className = mode === 'move' ? "px-3 py-1 rounded bg-cyan-600 text-white text-xs font-semibold transition" : "px-3 py-1 rounded bg-slate-800 text-slate-300 text-xs font-semibold transition hover:bg-slate-700";
+            document.getElementById('mode-rotate-btn').className = mode === 'rotate' ? "px-3 py-1 rounded bg-cyan-600 text-white text-xs font-semibold transition" : "px-3 py-1 rounded bg-slate-800 text-slate-300 text-xs font-semibold transition hover:bg-slate-700";
+            updateHUD();
+        }
+
+        function resetLabScene() {
+            sceneObjects.forEach(obj => scene.remove(obj));
+            sceneObjects = [];
+            selectedObject = null;
+            protoboardObj = spawnComponent('protoboard', new THREE.Vector3(0, 0, 0));
+            spawnComponent('arduino', new THREE.Vector3(-6, 0, 0));
+            spawnComponent('resistor', new THREE.Vector3(3, 0, 0));
+            spawnComponent('led', new THREE.Vector3(-2, 0, 0));
+            updateHUD();
+        }
+
+        /* --- Mouse Interaction Handlers --- */
+        let isDragging = false;
+        const planeIntersect = new THREE.Vector3();
+
+        function onCanvasMouseDown(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(sceneObjects, true);
+
+            if (intersects.length > 0) {
+                let hitObj = intersects[0].object;
+                while (hitObj.parent && !hitObj.userData.isComponent) {
+                    hitObj = hitObj.parent;
+                }
+                if (hitObj.userData.isComponent) {
+                    selectObject(hitObj);
+                    isDragging = true;
+                    isOrbiting = false;
+                }
+            } else {
+                // Click on empty space -> start camera orbit
+                isOrbiting = true;
+                isDragging = false;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        }
+
+        function onCanvasMouseMove(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+            if (isDragging && selectedObject) {
+                raycaster.setFromCamera(mouse, camera);
+                if (raycaster.ray.intersectPlane(dragPlane, planeIntersect)) {
+                    if (interactionMode === 'move') {
+                        // Prevent components from sinking beneath table / protoboard surface
+                        const minY = (selectedObject.userData.type === 'protoboard' || selectedObject.userData.type === 'arduino') ? 0 : 0.35;
+                        selectedObject.position.x = planeIntersect.x;
+                        selectedObject.position.z = planeIntersect.z;
+                        selectedObject.position.y = Math.max(minY, planeIntersect.y);
+
+                        // Snap-to-grid collision check with protoboard
+                        if (protoboardObj && (selectedObject.userData.type === 'resistor' || selectedObject.userData.type === 'led')) {
+                            const distToProto = selectedObject.position.distanceTo(protoboardObj.position);
+                            if (distToProto < 4.0) {
+                                // Snap Y to top surface of protoboard (0.35)
+                                selectedObject.position.y = 0.35;
+                                selectedObject.userData.isInserted = true;
+                                selectedObject.userData.status = 'Insertado';
+                            } else {
+                                selectedObject.userData.isInserted = false;
+                                selectedObject.userData.status = 'Libre';
+                            }
+                        }
+                    } else if (interactionMode === 'rotate') {
+                        selectedObject.rotation.y += e.movementX * 0.02;
+                    }
+                    updateHUD();
+                }
+            } else if (isOrbiting) {
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+
+                cameraOrbitAngleX -= deltaX * 0.008;
+                cameraOrbitAngleY = Math.max(0.1, Math.min(1.4, cameraOrbitAngleY + deltaY * 0.008));
+
+                updateCameraPosition();
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        }
+
+        function onCanvasMouseUp() {
+            isDragging = false;
+            isOrbiting = false;
+            if (selectedObject) {
+                selectedObject.userData.status = selectedObject.userData.isInserted ? 'Insertado' : 'Libre';
+                updateHUD();
+            }
+        }
+
+        function onCanvasWheel(e) {
+            e.preventDefault();
+            cameraDistance += e.deltaY * 0.02;
+            cameraDistance = Math.max(6, Math.min(30, cameraDistance));
+            updateCameraPosition();
+        }
+
+        /* --- Camera & MediaPipe Hands Integration (Strictly inside 3D Lab) --- */
+        function toggleCamera() {
+            cameraActive = !cameraActive;
+            const btn = document.getElementById('cam-toggle-btn');
+            const icon = document.getElementById('cam-icon');
+            const text = document.getElementById('cam-btn-text');
+            const webcamContainer = document.getElementById('webcam-container');
+
+            if (cameraActive) {
+                btn.className = "bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center space-x-1.5";
+                icon.className = "fa-solid fa-video-slash";
+                text.innerText = "Desactivar Cámara";
+                webcamContainer.classList.remove('hidden');
+                startMediaPipeCamera();
+            } else {
+                stopCamera();
+            }
+        }
+
+        function stopCamera() {
+            cameraActive = false;
+            const btn = document.getElementById('cam-toggle-btn');
+            const icon = document.getElementById('cam-icon');
+            const text = document.getElementById('cam-btn-text');
+            const webcamContainer = document.getElementById('webcam-container');
+            if (btn) {
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow transition flex items-center space-x-1.5";
+                icon.className = "fa-solid fa-video";
+                text.innerText = "Activar Cámara";
+            }
+            if (webcamContainer) webcamContainer.classList.add('hidden');
+            if (cameraUtilsInstance) {
+                cameraUtilsInstance.stop();
+                cameraUtilsInstance = null;
+            }
+        }
+
+        function startMediaPipeCamera() {
+            const videoElement = document.getElementById('webcam');
+            const canvasElement = document.getElementById('output_canvas');
+
+            mediaPipeHands = new Hands({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+            });
+
+            mediaPipeHands.setOptions({
+                maxNumHands: 2,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.6,
+                minTrackingConfidence: 0.6
+            });
+
+            mediaPipeHands.onResults(onHandResults);
+
+            cameraUtilsInstance = new Camera(videoElement, {
+                onFrame: async () => {
+                    if (cameraActive) {
+                        await mediaPipeHands.send({ image: videoElement });
+                    }
+                },
+                width: 320,
+                height: 240
+            });
+            cameraUtilsInstance.start();
+        }
+
+        let previousHandDistance = null;
+        let previousOpenHandX = null;
+
+        function onHandResults(results) {
+            const canvasElement = document.getElementById('output_canvas');
+            const canvasCtx = canvasElement.getContext('2d');
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const numHands = results.multiHandLandmarks.length;
+
+                // TWO HANDS GESTURE: ZOOM IN / ZOOM OUT
+                if (numHands === 2) {
+                    const hand1 = results.multiHandLandmarks[0][0]; // Wrist
+                    const hand2 = results.multiHandLandmarks[1][0]; // Wrist
+                    const currentDistance = Math.hypot(hand1.x - hand2.x, hand1.y - hand2.y);
+
+                    if (previousHandDistance !== null) {
+                        const diff = currentDistance - previousHandDistance;
+                        if (Math.abs(diff) > 0.005) {
+                            if (diff > 0) {
+                                gestureMode = 'Dos Manos: Separar (Zoom In)';
+                                cameraDistance = Math.max(6, cameraDistance - 0.3);
+                            } else {
+                                gestureMode = 'Dos Manos: Juntar (Zoom Out)';
+                                cameraDistance = Math.min(30, cameraDistance + 0.3);
+                            }
+                            updateCameraPosition();
+                        }
+                    }
+                    previousHandDistance = currentDistance;
+                } 
+                // SINGLE HAND GESTURES
+                else if (numHands === 1) {
+                    previousHandDistance = null;
+                    const landmarks = results.multiHandLandmarks[0];
+                    drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, { color: '#00ffcc', lineWidth: 2 });
+                    drawLandmarks(canvasCtx, landmarks, { color: '#ff0066', lineWidth: 1, radius: 3 });
+
+                    const thumbTip = landmarks[4];
+                    const indexTip = landmarks[8];
+                    const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+
+                    // Check if hand is open (tips higher than PIP joints)
+                    const isOpenHand = landmarks[8].y < landmarks[6].y && 
+                                       landmarks[12].y < landmarks[10].y && 
+                                       landmarks[16].y < landmarks[14].y;
+
+                    if (pinchDist < 0.05) {
+                        gestureMode = 'Pinza Sostenida (Mover)';
+                        if (!selectedObject && sceneObjects.length > 0) {
+                            selectObject(sceneObjects[0]);
+                        }
+                        if (selectedObject) {
+                            selectedObject.position.x = (indexTip.x - 0.5) * 14;
+                            selectedObject.position.z = (indexTip.y - 0.5) * 12;
+                            selectedObject.position.y = 0.35; // Keep above table / protoboard
+                            selectedObject.userData.status = 'En Movimiento';
+                        }
+                    } else if (isOpenHand) {
+                        gestureMode = 'Mano Abierta (Rotar Vista)';
+                        const palmX = landmarks[0].x;
+                        if (previousOpenHandX !== null) {
+                            const deltaX = palmX - previousOpenHandX;
+                            if (Math.abs(deltaX) > 0.005) {
+                                cameraOrbitAngleX -= deltaX * 3.5;
+                                updateCameraPosition();
+                            }
+                        }
+                        previousOpenHandX = palmX;
+                    } else {
+                        gestureMode = 'Seguimiento Activo';
+                        previousOpenHandX = null;
+                        if (selectedObject) {
+                            selectedObject.userData.status = selectedObject.userData.isInserted ? 'Insertado' : 'Libre';
+                        }
+                    }
+                }
+            } else {
+                gestureMode = 'Sin mano detectada';
+                previousHandDistance = null;
+                previousOpenHandX = null;
+            }
+            canvasCtx.restore();
+            updateHUD();
+        }
+
+        function animateLab() {
+            requestAnimationFrame(animateLab);
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        /* --- Simulators Logic --- */
+        let sim1State = false;
+        function runSimulator(simNum) {
+            if (simNum === 1) {
+                sim1State = !sim1State;
+                const led = document.getElementById('sim1-led');
+                const icon = document.getElementById('sim1-icon');
+                const text = document.getElementById('sim1-status-text');
+
+                if (sim1State) {
+                    led.className = "w-12 h-12 rounded-full bg-red-600 border-2 border-red-400 flex items-center justify-center transition-all shadow-lg shadow-red-600/50";
+                    icon.className = "fa-solid fa-bolt text-white text-lg animate-pulse";
+                    text.innerText = "LED Encendido (HIGH)";
+                } else {
+                    led.className = "w-12 h-12 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center transition-all shadow-lg";
+                    icon.className = "fa-solid fa-bolt text-slate-600 text-lg";
+                    text.innerText = "LED Apagado (LOW)";
+                }
+            }
+        }
+
+        function pressButton(isPressed) {
+            const led = document.getElementById('sim2-led');
+            const status = document.getElementById('sim2-status');
+            if (isPressed) {
+                led.className = "w-10 h-10 rounded-full bg-emerald-500 border-2 border-emerald-300 flex items-center justify-center transition-all shadow-lg shadow-emerald-500/50";
+                status.innerText = "Encendido";
+                status.className = "text-[10px] font-mono text-emerald-400 font-bold";
+            } else {
+                led.className = "w-10 h-10 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center transition-all";
+                status.innerText = "Apagado";
+                status.className = "text-[10px] font-mono text-slate-400";
+            }
+        }
+
+        function updateUltrasonicSim(val) {
+            document.getElementById('sim3-val').innerText = `${val} cm`;
+            const feedback = document.getElementById('sim3-feedback');
+            if (val < 20) {
+                feedback.innerText = "¡Alerta! Objeto demasiado cerca (< 20cm).";
+                feedback.className = "text-xs text-rose-400 font-medium";
+            } else {
+                feedback.innerText = "Objeto detectado a rango óptimo.";
+                feedback.className = "text-xs text-cyan-300 font-medium";
+            }
+        }
+
+        function updateServoSim(val) {
+            document.getElementById('sim4-val').innerText = `${val}°`;
+            document.getElementById('sim4-feedback').innerText = `Eje posicionado en ángulo de ${val} grados.`;
+        }
+
+        // Micro:bit Matrix 5x5
+        const matrixGrid = document.getElementById('matrix-grid');
+        if (matrixGrid) {
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('button');
+                cell.className = "w-8 h-8 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 transition";
+                cell.onclick = () => {
+                    cell.classList.toggle('bg-amber-500');
+                    cell.classList.toggle('border-amber-300');
+                    cell.classList.toggle('shadow-lg');
+                    cell.classList.toggle('shadow-amber-500/50');
+                };
+                matrixGrid.appendChild(cell);
+            }
+        }
+
+        function clearMatrix() {
+            const cells = matrixGrid.querySelectorAll('button');
+            cells.forEach(c => {
+                c.className = "w-8 h-8 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 transition";
+            });
+        }
+
+        function pressMicroButton(btnName) {
+            document.getElementById('sim6-output').innerText = `Evento detectado: Botón ${btnName} presionado.`;
+        }
+
+        /* --- Quizzes & Visual Feedback --- */
+        const quizData = [
+            {
+                q: "1. ¿Cuál es la función de la función setup() en Arduino?",
+                options: [
+                    "Ejecutarse en bucle infinito de forma continua.",
+                    "Configurar pines y variables una sola vez al iniciar.",
+                    "Apagar la placa automáticamente.",
+                    "Medir la temperatura del microcontrolador."
+                ],
+                correct: 1,
+                explanation: "setup() se ejecuta una sola vez al encender o reiniciar la placa para inicializar configuraciones."
+            },
+            {
+                q: "2. Según la Ley de Ohm, ¿cómo se relacionan Voltaje (V), Corriente (I) y Resistencia (R)?",
+                options: [
+                    "V = I × R",
+                    "I = V × R²",
+                    "R = V + I",
+                    "V = I / R"
+                ],
+                correct: 0,
+                explanation: "La Ley de Ohm establece que el voltaje es igual a la corriente multiplicada por la resistencia (V = I × R)."
+            },
+            {
+                q: "3. ¿Qué componentes integran principalmente la placa BBC Micro:bit?",
+                options: [
+                    "Un motor de gasolina y transmisión.",
+                    "Una matriz LED 5x5, dois botones A/B y sensores integrados.",
+                    "Un disco duro de 1 Terabyte.",
+                    "Una pantalla táctil de alta definición."
+                ],
+                correct: 1,
+                explanation: "La Micro:bit destaca por su matriz LED 5x5, botones A y B, y sensores como acelerómetro."
+            }
+        ];
+
+        function renderQuiz() {
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = quizData.map((item, qIdx) => `
+                <div class="glass-panel p-6 rounded-2xl space-y-4" id="q-card-${qIdx}">
+                    <h3 class="font-bold text-base text-slate-200">${item.q}</h3>
+                    <div class="space-y-2">
+                        ${item.options.map((opt, oIdx) => `
+                            <label class="flex items-center space-x-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800 hover:border-slate-700 cursor-pointer transition">
+                                <input type="radio" name="q_${qIdx}" value="${oIdx}" class="accent-cyan-500">
+                                <span class="text-sm text-slate-300">${opt}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div id="feedback-${qIdx}" class="hidden p-3 rounded-xl text-xs font-medium"></div>
+                </div>
+            `).join('');
+        }
+        renderQuiz();
+
+        function submitQuiz() {
+            let score = 0;
+            quizData.forEach((item, qIdx) => {
+                const selected = document.querySelector(`input[name="q_${qIdx}"]:checked`);
+                const feedbackDiv = document.getElementById(`feedback-${qIdx}`);
+                feedbackDiv.classList.remove('hidden');
+
+                if (selected) {
+                    const ans = parseInt(selected.value);
+                    if (ans === item.correct) {
+                        score += 33.3;
+                        feedbackDiv.className = "p-3 rounded-xl text-xs font-medium bg-emerald-950/80 border border-emerald-800 text-emerald-300 flex items-center space-x-2";
+                        feedbackDiv.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i> <span><strong>¡Correcto!</strong> ${item.explanation}</span>`;
+                    } else {
+                        feedbackDiv.className = "p-3 rounded-xl text-xs font-medium bg-rose-950/80 border border-rose-800 text-rose-300 flex items-center space-x-2";
+                        feedbackDiv.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-400 text-base"></i> <span><strong>Incorrecto.</strong> ${item.explanation}</span>`;
+                    }
+                } else {
+                    feedbackDiv.className = "p-3 rounded-xl text-xs font-medium bg-amber-950/80 border border-amber-800 text-amber-300 flex items-center space-x-2";
+                    feedbackDiv.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i> <span>No seleccionaste ninguna opción.</span>`;
+                }
+            });
+            document.getElementById('quiz-score').innerText = `Puntuación: ${Math.round(score)} / 100`;
+        }
+    </script>
+</body>
+</html>
